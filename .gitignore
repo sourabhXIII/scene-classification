@@ -1,0 +1,6 @@
+.vscode
+__pycache__/*
+train_test/*
+train-scene_classification/*
+*.zip
+*.csv
