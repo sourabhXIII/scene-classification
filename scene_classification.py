@@ -8,19 +8,20 @@ import numpy as np
 from PIL import Image
 from matplotlib import pyplot
 
-import imgaug.augmenters as iaa
+from utility import Utility as mutil
+import datagen as mdgen
+
 import keras
 from keras.models import load_model
 from keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 from sklearn.model_selection import train_test_split
 import keras.optimizers as optimizers
 
-TRAIN_FOLDER = 'train-scene_classification'+os.sep+'train'
 TEST_FOLDER = 'train-scene_classification'+os.sep+'test'
 
-BATCH_SIZE = 64
-IMG_HEIGHT = 64
-IMG_WIDTH = 64
+BATCH_SIZE = 32
+IMG_HEIGHT = 60
+IMG_WIDTH = 60
 CHANNELS = 3
 N_CLASSES = 6
 EPOCHS = 100
@@ -28,115 +29,27 @@ EPOCHS = 100
 df = pd.read_csv('train-scene_classification'+os.sep+'train.csv')
 test_df = pd.read_csv('train-scene_classification'+os.sep+'test.csv')
 
-train_df, val_df = train_test_split(df, stratify=df['label'], test_size=0.1, random_state=42)
-train_df.reset_index(drop=True, inplace=True)
-val_df.reset_index(drop=True, inplace=True)
+# set seed
+mutil.set_seeds()
 
-train_datagen = ImageDataGenerator(
-    rescale=1./255,
-    rotation_range=10,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    horizontal_flip=True,
-    fill_mode='wrap',
-    zoom_range=0.3
-    , brightness_range=(1, 1.3)
-    , validation_split=0.15
-    )
+# get train and val df
+train_df, val_df = mutil.get_train_val_df(df, 0.1)
 
-sample_imgs = train_df['image_name'].sample(frac=0.1)
-X_sample = np.ndarray(shape=(len(sample_imgs), IMG_HEIGHT, IMG_WIDTH, CHANNELS),
-            dtype=np.float32)
+#training data generator 
+train_generator = mdgen.data_generator(train_df, N_CLASSES, BATCH_SIZE
+                    , IMG_HEIGHT, IMG_WIDTH, CHANNELS)
 
+# validation data generator 
+valid_generator = mdgen.data_generator(val_df, N_CLASSES, BATCH_SIZE
+                    , IMG_HEIGHT, IMG_WIDTH, CHANNELS, is_validation_data=True)
 
-i = 0
-for _file in sample_imgs:
-    img = Image.open(os.getcwd()+os.sep+'train-scene_classification'+os.sep+'train' +os.sep+ _file)  # this is a PIL image
-    # img.thumbnail((IMG_HEIGHT, IMG_WIDTH), Image.ANTIALIAS) # creates thumbnails of images
-    img = img.resize((IMG_HEIGHT, IMG_WIDTH))
-    # Convert to Numpy Array
-    x = img_to_array(img)
-    x = x/255.
-    x = x.reshape((IMG_HEIGHT, IMG_WIDTH, CHANNELS))
-    X_sample[i] = x
-    i += 1
-
-'''
-# ----------------->>
-# peek into the resized image
-# create a grid of 3x3 images
-for i in range(0, 9):
-	pyplot.subplot(330 + 1 + i)
-	pyplot.imshow(X_sample[i])
-# pyplot.show()
-# <<----------------
-'''
-
-# ----------------->>
-# peek inside a batch of image
-img=load_img(os.getcwd()+os.sep+'train-scene_classification'+os.sep+'train' +os.sep+'0.jpg')
-x=img_to_array(img)
-x = x.reshape((1,) + x.shape)
-save_dir=os.getcwd()+os.sep+'train-scene_classification'+os.sep+'preview'
-for batch in train_datagen.flow(x, batch_size=1,
-                            save_to_dir=save_dir, save_prefix='cat', save_format='jpeg'):
-    i += 1
-    if i > 20:
-        break  # otherwise the generator would loop indefinitely
-# <<-----------------
-
-# let's say X_sample is a small-ish but statistically representative sample of my data
-train_datagen.fit(X_sample)
-
-train_generator = train_datagen.flow_from_dataframe(
-    dataframe=df,
-    directory=TRAIN_FOLDER,
-    x_col="image_name",
-    y_col="label",
-    has_ext=True,
-    color_mode='rgb',
-    subset="training",
-    batch_size=BATCH_SIZE,
-    seed=42,
-    shuffle=True,
-    class_mode="categorical",
-    target_size=(IMG_HEIGHT, IMG_WIDTH))
-
-valid_generator=train_datagen.flow_from_dataframe(
-    dataframe=df,
-    directory=TRAIN_FOLDER,
-    x_col="image_name",
-    y_col="label",
-    has_ext=True,
-    subset="validation",
-    batch_size=BATCH_SIZE,
-    seed=42,
-    shuffle=True,
-    class_mode="categorical",
-    target_size=(IMG_HEIGHT, IMG_WIDTH))
-
-test_datagen=ImageDataGenerator(rescale=1./255.)
-
-test_generator=test_datagen.flow_from_dataframe(
-    dataframe=test_df,
-    directory=TEST_FOLDER,
-    x_col="image_name",
-    y_col=None,
-    has_ext=True,
-    batch_size=32,
-    seed=42,
-    shuffle=False,
-    class_mode=None,
-    target_size=(IMG_HEIGHT, IMG_WIDTH))
-
-
-STEP_SIZE_TRAIN = 1 + train_generator.n//train_generator.batch_size
-STEP_SIZE_VALID = 1 + valid_generator.n//valid_generator.batch_size
+STEP_SIZE_TRAIN = int(np.ceil(len(train_df)/BATCH_SIZE))
+STEP_SIZE_VALID = int(np.ceil(len(val_df)/BATCH_SIZE))
 
 def get_model():
     import model_factory as mf
 
-    bm = mf.BestModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
+    bm = mf.TLModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
     model = bm.get_model()
     print('Loaded model.')
 
@@ -150,7 +63,7 @@ def train_model(model):
     chkpoint = keras.callbacks.ModelCheckpoint(model_filepath, monitor='val_loss', verbose=1
         , save_best_only=True, save_weights_only=False, mode='auto', period=1)
     es = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.002, patience=5 # pylint: disable=unused-variable
-        , verbose=1, mode='auto', baseline=None)
+        , verbose=1, mode='auto', baseline=None, restore_best_weights=True)
     reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, # pylint: disable=unused-variable
         patience=10, min_lr=0.0001, verbose=1) 
 
@@ -172,7 +85,7 @@ def train_model(model):
                                             warmup_learning_rate=0.000001,
                                             warmup_steps=warmup_steps,
                                             hold_base_rate_steps=hold_base_rate_steps,
-                                            verbose=0)
+                                            verbose=1)
 
     callback_list=[keras.callbacks.History(), chkpoint, warm_up_lr]
 

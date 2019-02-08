@@ -111,8 +111,8 @@ class WarmUpCosineDecayScheduler(keras.callbacks.Callback):
                                       hold_base_rate_steps=self.hold_base_rate_steps)
         K.set_value(self.model.optimizer.lr, lr)
         if self.verbose == 1:
-            if self.global_step > self.warmup_steps: print("\n Warm state ends.")
-            if self.global_step > self.hold_base_rate_steps: print("\n Hold base LR state ends.")
+            if self.global_step == (self.warmup_steps + 1): print("\n Warm state ends.")
+            if self.global_step == (self.hold_base_rate_steps + 1): print("\n Hold base LR state ends.")
         elif self.verbose == 2:
             print('\nBatch %05d: setting learning '
                   'rate to %s.' % (self.global_step + 1, lr))

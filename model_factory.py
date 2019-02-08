@@ -20,7 +20,7 @@ class TLModel:
         with K.name_scope('input'):
             input_c = Input(shape=self.input_shape)
         with K.name_scope('base_model'):
-            base_model = applications.ResNet50(input_tensor=input_c, input_shape=self.input_shape
+            base_model = applications.VGG16(input_tensor=input_c, input_shape=self.input_shape
                 , weights='imagenet', include_top=False)
             q = base_model.output
         with K.name_scope('common_path'):
@@ -94,18 +94,19 @@ class BestModel:
 
     def get_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), padding='same',
+        model.add(Conv2D(64, (3, 3), padding='same',
                         input_shape=self.input_shape))
         model.add(Activation('relu'))
-        model.add(Conv2D(32, (3, 3)))
+        model.add(Conv2D(64, (3, 3)))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
         model.add(Conv2D(64, (3, 3), padding='same'))
         model.add(Activation('relu'))
-        model.add(Conv2D(64, (3, 3)))
-        model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
         model.add(Conv2D(32, (3, 3), padding='same'))
         model.add(Activation('relu'))
         model.add(Conv2D(32, (3, 3)))
@@ -115,10 +116,10 @@ class BestModel:
         model.add(Flatten())
         model.add(Dense(512))
         model.add(Activation('relu'))
-        model.add(Dropout(0.5))        
+        model.add(Dropout(0.7))        
         model.add(Dense(512))
         model.add(Activation('relu'))
-        model.add(Dropout(0.5))
+        model.add(Dropout(0.7))
         model.add(Dense(256))
         model.add(Activation('relu'))
         model.add(Dropout(0.5))

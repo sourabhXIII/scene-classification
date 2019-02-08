@@ -4,3 +4,4 @@ train_test/*
 train-scene_classification/*
 *.zip
 *.csv
+*.hdf5
