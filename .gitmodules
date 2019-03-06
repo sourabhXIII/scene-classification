@@ -1,0 +1,3 @@
+[submodule "vgg16_places"]
+	path = vgg16_places
+	url = https://github.com/GKalliatakis/Keras-VGG16-places365.git
