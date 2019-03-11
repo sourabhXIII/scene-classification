@@ -37,40 +37,45 @@ class TLModel:
             # q = base_model.output
         with K.name_scope('common_path'):
             xy = Flatten()(q)
-            xy = Dense(256, activation='sigmoid', name='Dense1')(xy)
-            xy = BatchNormalization()(xy)
-
-            xy = Dense(256, activation='sigmoid', name='Dense2')(xy)
+            xy = Dense(256, activation='relu', name='Dense1')(xy)
             xy = Dropout(0.5)(xy)
             xy = BatchNormalization()(xy)
 
-            xy = Dense(256, activation='sigmoid', name='Dense3')(xy)
+            xy = Dense(256, activation='relu', name='Dense2')(xy)
             xy = Dropout(0.5)(xy)
             xy = BatchNormalization()(xy)
 
-            xy = Dense(128, activation='sigmoid', name='Dense4')(xy)
+            xy = Dense(256, activation='relu', name='Dense3')(xy)
             xy = Dropout(0.5)(xy)
             xy = BatchNormalization()(xy)
 
-            xy = Dense(128, activation='sigmoid', name='Dense5')(xy)
+            xy = Dense(128, activation='relu', name='Dense4')(xy)
             xy = Dropout(0.5)(xy)
             xy = BatchNormalization()(xy)
 
-            xy = Dense(64, activation='sigmoid', name='Dense6')(xy)
+            xy = Dense(128, activation='relu', name='Dense5')(xy)
             xy = Dropout(0.5)(xy)
             xy = BatchNormalization()(xy)
 
-            # xy = Dense(64, activation='sigmoid', name='Dense7')(xy)
-            # xy = Dropout(0.5)(xy)
-            # xy = BatchNormalization()(xy)
+            xy = Dense(128, activation='relu', name='Dense6')(xy)
+            xy = Dropout(0.5)(xy)
+            xy = BatchNormalization()(xy)
 
-            # xy = Dense(64, activation='sigmoid', name='Dense8')(xy)
-            # xy = Dropout(0.5)(xy)
-            # xy = BatchNormalization()(xy)
+            xy = Dense(64, activation='relu', name='Dense7')(xy)
+            xy = Dropout(0.5)(xy)
+            xy = BatchNormalization()(xy)
 
-            xy = Dense(32, activation='sigmoid', name='Dense9')(xy)
+            xy = Dense(64, activation='relu', name='Dense8')(xy)
+            xy = Dropout(0.5)(xy)
+            xy = BatchNormalization()(xy)
+
+            xy = Dense(64, activation='relu', name='Dense9')(xy)
+            xy = Dropout(0.5)(xy)
+            xy = BatchNormalization()(xy)
+
+            xy = Dense(32, activation='relu', name='Dense10')(xy)
             xy = Dropout(0.3)(xy)
-            # xy = BatchNormalization()(xy)
+            xy = BatchNormalization()(xy)
 
         with K.name_scope('prediction'):
             preds = Dense(self.output_shape, activation='softmax', name='DenseP')(xy)

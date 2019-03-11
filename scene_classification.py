@@ -19,17 +19,17 @@ from sklearn.model_selection import train_test_split
 import keras.optimizers as optimizers
 
 import tensorflow as tf
-tf.enable_eager_execution()
+# tf.enable_eager_execution()
 
 TRAIN_FOLDER = 'train-scene_classification'+os.sep+'train'
 TEST_FOLDER = 'train-scene_classification'+os.sep+'test'
 
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 IMG_HEIGHT = 70
 IMG_WIDTH = 70
 CHANNELS = 3
 N_CLASSES = 6
-EPOCHS = 250
+EPOCHS = 500
 
 df = pd.read_csv('train-scene_classification'+os.sep+'train.csv')
 test_df = pd.read_csv('train-scene_classification'+os.sep+'test.csv')
@@ -89,6 +89,7 @@ STEP_SIZE_VALID = int(np.ceil(len(val_df)/BATCH_SIZE))
 def get_model():
     import model_factory as mf
 
+    # bm = mf.TLModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
     bm = SeNetModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
     model = bm.get_model()
     print('Loaded model.')
@@ -131,7 +132,7 @@ def train_model(model):
     callback_list=[keras.callbacks.History(), chkpoint]
 
     # compile model
-    model.compile(optimizer=tf.train.AdamOptimizer(0.001, epsilon=1e-2) # optimizers.adam(lr=0.001, decay=1e-6)
+    model.compile(optimizer=tf.train.AdamOptimizer(0.005) # optimizers.adam(lr=0.001, decay=1e-6)
             ,loss="categorical_crossentropy"
             ,metrics=["accuracy"]
             )
@@ -146,7 +147,14 @@ def train_model(model):
 
 def evaluate_model(model_file):
     print('Validating Model:')
-    model = load_model(model_file)
+    # model = load_model(model_file)
+    # with tf.keras.utils.CustomObjectScope({'GlorotUniform': tf.keras.initializers.glorot_uniform()}):
+    model = tf.keras.models.load_model(model_file)
+    # compile model
+    model.compile(optimizer=tf.train.AdamOptimizer(0.005) # optimizers.adam(lr=0.001, decay=1e-6)
+            ,loss="categorical_crossentropy"
+            ,metrics=["accuracy"]
+            )
     y_pred = []
     y_true = []
     i = 0
@@ -186,7 +194,13 @@ def test_model(model_filepath):
         class_mode=None,
         target_size=(IMG_HEIGHT, IMG_WIDTH))
 
-    model = load_model(model_filepath)
+    model = tf.keras.models.load_model(model_filepath)
+    # compile model
+    model.compile(optimizer=tf.train.AdamOptimizer(0.005) # optimizers.adam(lr=0.001, decay=1e-6)
+            ,loss="categorical_crossentropy"
+            ,metrics=["accuracy"]
+            )
+
     test_generator.reset()
     STEP_SIZE_TEST = 1 + test_generator.n//test_generator.batch_size
     pred=model.predict_generator(test_generator, steps=STEP_SIZE_TEST, verbose=1)
@@ -205,7 +219,7 @@ def test_model(model_filepath):
 
 if __name__ == '__main__':
     model = get_model()
-    train_model(model)
-    # evaluate_model('model.92-0.8120-0.8630-0.8918-0.6200.hdf5')
-    # test_model('model.92-0.8120-0.8630-0.8918-0.6200.hdf5')
+    # train_model(model)
+    evaluate_model('model.476-0.8184-0.5896-0.8582-0.4726.hdf5')
+    test_model('model.476-0.8184-0.5896-0.8582-0.4726.hdf5')
     # test_model('model.197-0.8690-0.4002-0.8579-0.4002.hdf5')
