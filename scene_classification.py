@@ -21,15 +21,17 @@ import keras.optimizers as optimizers
 import tensorflow as tf
 # tf.enable_eager_execution()
 
+# TODO: one thumb rule: LR = 0.1 * (batch_size / 256)
+
 TRAIN_FOLDER = 'train-scene_classification'+os.sep+'train'
 TEST_FOLDER = 'train-scene_classification'+os.sep+'test'
 
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 IMG_HEIGHT = 70
 IMG_WIDTH = 70
 CHANNELS = 3
 N_CLASSES = 6
-EPOCHS = 500
+EPOCHS = 1000
 
 df = pd.read_csv('train-scene_classification'+os.sep+'train.csv')
 test_df = pd.read_csv('train-scene_classification'+os.sep+'test.csv')
@@ -132,7 +134,7 @@ def train_model(model):
     callback_list=[keras.callbacks.History(), chkpoint]
 
     # compile model
-    model.compile(optimizer=tf.train.AdamOptimizer(0.005) # optimizers.adam(lr=0.001, decay=1e-6)
+    model.compile(optimizer=tf.train.AdamOptimizer(0.01) # optimizers.adam(lr=0.001, decay=1e-6)
             ,loss="categorical_crossentropy"
             ,metrics=["accuracy"]
             )
@@ -148,10 +150,10 @@ def train_model(model):
 def evaluate_model(model_file):
     print('Validating Model:')
     # model = load_model(model_file)
-    # with tf.keras.utils.CustomObjectScope({'GlorotUniform': tf.keras.initializers.glorot_uniform()}):
-    model = tf.keras.models.load_model(model_file)
+    with tf.keras.utils.CustomObjectScope({'GlorotUniform': tf.keras.initializers.glorot_uniform()}):
+        model = tf.keras.models.load_model(model_file)
     # compile model
-    model.compile(optimizer=tf.train.AdamOptimizer(0.005) # optimizers.adam(lr=0.001, decay=1e-6)
+    model.compile(optimizer=tf.train.AdamOptimizer(0.01) # optimizers.adam(lr=0.001, decay=1e-6)
             ,loss="categorical_crossentropy"
             ,metrics=["accuracy"]
             )
@@ -194,9 +196,10 @@ def test_model(model_filepath):
         class_mode=None,
         target_size=(IMG_HEIGHT, IMG_WIDTH))
 
-    model = tf.keras.models.load_model(model_filepath)
+    with tf.keras.utils.CustomObjectScope({'GlorotUniform': tf.keras.initializers.glorot_uniform()}):
+        model = tf.keras.models.load_model(model_filepath)
     # compile model
-    model.compile(optimizer=tf.train.AdamOptimizer(0.005) # optimizers.adam(lr=0.001, decay=1e-6)
+    model.compile(optimizer=tf.train.AdamOptimizer(0.01) # optimizers.adam(lr=0.001, decay=1e-6)
             ,loss="categorical_crossentropy"
             ,metrics=["accuracy"]
             )
@@ -219,7 +222,7 @@ def test_model(model_filepath):
 
 if __name__ == '__main__':
     model = get_model()
-    # train_model(model)
-    evaluate_model('model.476-0.8184-0.5896-0.8582-0.4726.hdf5')
-    test_model('model.476-0.8184-0.5896-0.8582-0.4726.hdf5')
+    train_model(model)
+    # evaluate_model('model.612-0.8457-0.4808-0.8689-0.4342.hdf5')
+    # test_model('model.612-0.8457-0.4808-0.8689-0.4342.hdf5')
     # test_model('model.197-0.8690-0.4002-0.8579-0.4002.hdf5')
