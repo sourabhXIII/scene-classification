@@ -118,6 +118,56 @@ class WarmUpCosineDecayScheduler(keras.callbacks.Callback):
                   'rate to %s.' % (self.global_step + 1, lr))
 
 
+class TransferLearningLRScheduler(keras.callbacks.Callback):
+    """ In case of Transfer Learning, we start by training only the added layers with a higher learning rate.
+        This ensures that the newly added random weights are adjusted to the pre-trained convolutional weights.
+        This burn-in period mitigates the risk of juggling around the convolutional weights at training start 
+        and consequently slowing down the training process.
+        After the burn-in period we should train all weights in the CNN with a low learning rate..
+    """
+    def __init__(self
+                , learning_rate_initial=0.01
+                , learning_rate_base=0.0001
+                , burn_in_steps=5
+                , layers = 0
+                , global_step_init=0
+                , verbose=1):
+        super(TransferLearningLRScheduler, self).__init__()
+        self.learning_rate_initial = learning_rate_initial
+        self.learning_rate_base = learning_rate_base
+        self.burn_in_steps = burn_in_steps
+        self.global_step = global_step_init
+        self.layers = layers
+        self.verbose = verbose
+        self.learning_rates = []
+
+    def on_batch_end(self, batch, logs=None):
+        self.global_step = self.global_step + 1
+        lr = K.get_value(self.model.optimizer.lr)
+        self.learning_rates.append(lr)
+
+    def on_batch_begin(self, batch, logs=None):
+        lr = 0.
+        if self.global_step >= self.burn_in_steps:
+            lr = self.learning_rate_base
+            # make the entire network trainable
+            for layer in self.model.layers[self.layers:]:
+                layer.trainable = True
+            self.model.compile(self.model.optimizer, self.model.loss, self.model.metrics)
+        else:
+            lr = self.learning_rate_initial
+        assert lr != 0., 'LR can not be zero.'
+        K.set_value(self.model.optimizer.lr, lr)
+        if self.verbose == 1:
+            if self.global_step == (self.burn_in_steps + 1):
+                print("\n Burn-in state ends."
+                      "Using LR = %s" %(lr))
+        elif self.verbose == 2:
+            print('\nBatch %05d: setting learning '
+                  'rate to %s.' % (self.global_step + 1, lr))
+
+
+
 '''
 
 https://www.dlology.com/blog/bag-of-tricks-for-image-classification-with-convolutional-neural-networks-in-keras/

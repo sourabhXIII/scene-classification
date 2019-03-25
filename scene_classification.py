@@ -26,9 +26,9 @@ import tensorflow as tf
 TRAIN_FOLDER = 'train-scene_classification'+os.sep+'train'
 TEST_FOLDER = 'train-scene_classification'+os.sep+'test'
 
-BATCH_SIZE = 128
-IMG_HEIGHT = 70
-IMG_WIDTH = 70
+BATCH_SIZE = 64
+IMG_HEIGHT = 128
+IMG_WIDTH = 128
 CHANNELS = 3
 N_CLASSES = 6
 EPOCHS = 1000
@@ -91,8 +91,8 @@ STEP_SIZE_VALID = int(np.ceil(len(val_df)/BATCH_SIZE))
 def get_model():
     import model_factory as mf
 
-    # bm = mf.TLModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
-    bm = SeNetModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
+    bm = mf.TLModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
+    # bm = SeNetModel((IMG_HEIGHT, IMG_WIDTH, CHANNELS), N_CLASSES)
     model = bm.get_model()
     print('Loaded model.')
 
@@ -112,7 +112,7 @@ def train_model(model):
 
     import warmup_cosine_lr_decay_scheduler as wcos_lr_sch
     # number of warmup epochs
-    warmup_epoch = 2
+    warmup_epoch = 5
     # base learning rate after warmup.
     learning_rate_base = 0.001
     # total number of steps (NumEpoch * StepsPerEpoch)
@@ -129,8 +129,18 @@ def train_model(model):
                                             warmup_steps=warmup_steps,
                                             hold_base_rate_steps=hold_base_rate_steps,
                                             verbose=1)
+    burn_in_lr = wcos_lr_sch.TransferLearningLRScheduler(burn_in_steps=warmup_steps)
 
-    # callback_list=[keras.callbacks.History(), chkpoint, warm_up_lr]
+    # ------------------------------->>
+    callback_list=[keras.callbacks.History(), chkpoint, burn_in_lr]
+    # compile model
+    model.compile(optimizer=optimizers.adam(lr=0.001, decay=1e-6)
+            ,loss="categorical_crossentropy"
+            ,metrics=["accuracy"]
+            )
+    # <<-------------------------------
+    """
+    # tf.keras specific
     callback_list=[keras.callbacks.History(), chkpoint]
 
     # compile model
@@ -138,7 +148,7 @@ def train_model(model):
             ,loss="categorical_crossentropy"
             ,metrics=["accuracy"]
             )
-
+    """
     model.fit_generator(generator=train_generator,
                         steps_per_epoch=STEP_SIZE_TRAIN,
                         validation_data=valid_generator,

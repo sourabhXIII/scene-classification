@@ -29,12 +29,12 @@ class TLModel:
         with K.name_scope('input'):
             input_c = Input(shape=self.input_shape)
         with K.name_scope('base_model'):
-            base_model = VGG16_Hybrid_1365(weights='places', include_top=False, input_shape=self.input_shape)
-            q = base_model(input_c)
-            # base_model = applications.VGG16(input_tensor=input_c, input_shape=self.input_shape
-            #     , weights='imagenet', include_top=False)
+            # base_model = VGG16_Hybrid_1365(weights='places', include_top=False, input_shape=self.input_shape)
+            # q = base_model(input_c)
+            base_model = applications.MobileNet(input_tensor=input_c, input_shape=self.input_shape
+                , weights='imagenet', include_top=False)
             # get the output of the second last dense layer 
-            # q = base_model.output
+            q = base_model.output
         with K.name_scope('common_path'):
             xy = Flatten()(q)
             xy = Dense(256, activation='relu', name='Dense1')(xy)
